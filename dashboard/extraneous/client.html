@@ -1,0 +1,151 @@
+<html>
+<head>
+	<link type="text/css" rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/src/css/graph.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/src/css/detail.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/src/css/legend.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/examples/css/extensions.css?v=2">
+
+	<script src="http://code.shutterstock.com/rickshaw/vendor/d3.v3.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+
+	<!-- <script>
+		jQuery.noConflict();
+	</script> -->
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.15/jquery-ui.min.js"></script>
+
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Class.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Compat.ClassList.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Renderer.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Renderer.Bar.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.RangeSlider.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.RangeSlider.Preview.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.HoverDetail.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Annotate.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Legend.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Axis.Time.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Behavior.Series.Toggle.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Behavior.Series.Order.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Behavior.Series.Highlight.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Smoother.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Time.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Time.Local.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Number.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.RandomData.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Color.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Color.Palette.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Axis.Y.js"></script>
+
+	<script src="http://code.shutterstock.com/rickshaw/examples/js/extensions.js"></script>
+<link rel="stylesheet" type="text/css" href="css/dash.css">
+</head>
+
+<body>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+	<script src="http://d3js.org/d3.v3.min.js"> </script>
+	<script src="socket.io/socket.io.js"></script>
+
+	<!-- <script src="http://code.jquery.com/jquery-latest.min.js"></script> -->
+<div id="container">
+
+<div id="content">
+
+	<form id="side_panel">
+		<h1>Tweets by sentiment</h1>
+		<section><div id="legend"></div></section>
+		<section>
+			<h6>Smoothing</h6>
+			<div id="smoother"></div>
+		</section>
+	</form>
+
+	<div id="chart_container">
+		<div id="chart"></div>
+		<div id="timeline"></div>
+		<div id="preview"></div>
+	</div>
+
+
+</div>
+
+<div id="HTchart"></div>
+<ul><div id="tweets"></div></ul>
+<div id="sentiment"></div>
+</div>
+<!--%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%-->
+<script src="htbubble.js"></script>
+<script src="sentibar.js"></script><script>
+var global_watchlist = [];
+
+var socket = io.connect('http://localhost:8080');
+
+var pos=0;
+var neg=0;
+socket.on('sentiment', function (data) {
+	var pos_new = data[0]['positive'];
+	var neg_new = data[0]['negative'];
+	//
+	// p_diff = pos_new - pos;
+	// n_diff = neg_new - neg;
+	// pos = pos_new;
+	// neg = neg_new;
+	n_diff = neg_new;
+	p_diff = pos_new;
+
+	var timeBase = Math.floor(new Date().getTime() / 1000);
+	seriesData[0].push({x:timeBase, y:n_diff});
+	seriesData[1].push({x:timeBase, y:p_diff});
+
+	if (seriesData[0].length >= 60) {
+		seriesData[0].shift();
+		seriesData[1].shift();
+	}
+	graph.update();
+});
+
+
+var tdata = [];
+socket.on('hashtag', function (data2) {
+    var tdata = {"name":"flare", "children":[]};
+    var display = "";
+    var kid = {"name":"analytics", "children":[]};
+
+	for (var i=0; i<data2.length; i++) {
+		kid.children.push({'name':data2[i]['tag'], 'size':data2[i]['count']});
+	}
+
+    // $.each(data2,function(ind, value){
+    //     display += value['tag'] + ": " + value['count'] + "<br>";
+    //     kid.children.push({'name':value['tag'], 'size':value['count']});
+    // });
+
+    tdata.children.push(kid);
+
+    $('#HTchart').val(changebubble(kid));
+});
+
+socket.on('tweets', function (data2) {
+    var toDisplay = '';
+    $.each(data2,function(ind, value){
+        user = value['user'];
+        text = value['text'];
+		sentiment = value['sentiment'];
+		var color;
+		if (sentiment == "0") {
+			color = "#D57676";
+		} else {
+			color = "#76E46E"
+		}
+		console.log(color);
+        toDisplay += "<li style=\"background:" + color + "\" ><strong>@" + user + "</strong>: " + text + "</li>";
+    });
+    $('#tweets').prepend(toDisplay);
+});
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Twitter Dashboard</title>
+  <link rel="stylesheet" type="text/css" href="/assets/lib/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="/assets/css/keen-dashboards.css" />
+
+  <link rel="stylesheet" type="text/css" href="css/dash.css">
+  <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css">
+
+  <!-- Load d3.js and c3.js -->
+  <script src="bower_components/d3/d3.min.js" charset="utf-8"></script>
+  <script src="bower_components/c3/c3.min.js"></script>
+
+  <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script> -->
+  <style>
+  /*.list li {
+      border: 1px dotted black;
+  }*/
+    #wordcloud {
+        min-height: 500px;
+    }
+    .chart-stage {
+        min-height: 130px;
+        /*max-height: 500px;*/
+    }
+    #current_word {
+        font-weight: bold;
+        font-size: 15px;
+    }
+    .saving {
+      font-size: 15px;
+    }
+
+    .saving span {
+      font-size: 15px;
+      animation-name: blink;
+      animation-duration: 1.4s;
+      animation-iteration-count: infinite;
+      animation-fill-mode: both;
+    }
+
+    .saving span:nth-child(2) {
+      animation-delay: .2s;
+    }
+
+    .saving span:nth-child(3) {
+      animation-delay: .4s;
+    }
+
+    @keyframes blink {
+      0% {
+        opacity: .2;
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        opacity: .2;
+      }
+    }
+  </style>
+
+</head>
+
+<body class="application">
+<!-- MY CUSTOM DEPENDCIES -->
+<script src="socket.io/socket.io.js"></script>
+<!--%%%%%%%%%%%%%%%%%%%%%-->
+  <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../">
+          <span class="glyphicon glyphicon-chevron-left"></span>
+        </a>
+        <a class="navbar-brand" href="./">Live Twitter Dashboard</a>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-left">
+          <li><a href="/">Main</a></li>
+          <li><a href="/alltweets">Explore All Tweets</a></li>
+          <li><a href="/map">Map</a></li>
+          <li><a href="/cloud">Word Map</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+
+    <div class="row"><br>
+      <div class="col-sm-3">
+          <div class="chart-wrapper">
+            <div class="chart-title">Word Cloud
+            </div><div class="chart-stage">
+                <form action="javascript:addKeyword();">
+                    Enter a keyword you would like to see associations for (can
+                    be a hashtag too). <br><br>
+                    <input type="text" id="keyword"
+                    style="width:280; height:50;">
+                </form>
+
+            </div>
+            <div class="chart-notes">
+                Currently Looking at Associations of: <div id="current_word"> (type and hit enter to see associations)</div>
+            </div>
+          </div>
+  </div>
+      <div class="col-sm-9">
+
+           <!-- @@@@@@@@@@@@@@@@@@ ROW @@@@@@@@@@@@@@@@ -->
+        <div class="row">
+          <div class="col-sm-12">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                  All tweets
+              </div>
+              <div class="chart-stage">
+                  <div id="wordcloud">
+                  </div>
+              </div>
+
+            </div>
+          </div>
+          <!---->
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+
+<hr>
+
+<p class="small text-muted">Built by Dewal Gupta [using <a href="https://keen.io">Keen IO</a>]</p>
+
+</div>
+
+<script type="text/javascript" src="/assets/lib/jquery/dist/jquery.min.js"></script>
+<script type="text/javascript" src="/assets/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+<script type="text/javascript" src="/assets/lib/holderjs/holder.js"></script>
+<script>
+Holder.add_theme("white", { background:"#fff", foreground:"#a7a7a7", size:10 });
+</script>
+
+<script type="text/javascript" src="/assets/lib/keen-js/dist/keen.min.js"></script>
+<script type="text/javascript" src="/assets/js/meta.js"></script>
+
+<script src="bower_components/d3/d3.min.js" charset="utf-8"></script>
+<script src="d3.layout.cloud.js"></script>
+<script>
+var socket = io.connect('http://localhost:8080/cloud');
+
+function drawcloud(wordmap) {
+    $("#wordcloud").html("");
+  var fill = d3.scale.category20();
+
+  var layout = d3.layout.cloud()
+      .size([700, 900])
+      .words(wordmap)
+      .padding(5)
+      .rotate(function() { return 0; })
+      .font("Impact")
+      .fontSize(function(d) { return d.size; })
+      .on("end", draw);
+
+  layout.start();
+
+  function draw(words) {
+    d3.select("#wordcloud").append("svg")
+        .attr("width", layout.size()[0])
+        .attr("height", layout.size()[1])
+      .append("g")
+        .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+      .selectAll("text")
+        .data(words)
+      .enter().append("text")
+        .style("font-size", function(d) { return d.size + "px"; })
+        .style("font-family", "Impact")
+        .style("fill", function(d, i) { return fill(i); })
+        .attr("text-anchor", "middle")
+        .attr("transform", function(d) {
+          return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+        })
+        .on('click', function(d) { document.getElementById("keyword").value = d.text; addKeyword(); })
+        .text(function(d) { return d.text; });
+  }
+}
+
+socket.on('wordmap', function(data) {
+    $("#wordcloud").html("<p class=\"saving\">Loading<span>.</span><span>.</span><span>.</span></p>");
+    drawcloud(data);
+});
+
+function addKeyword() {
+  var keyword = document.getElementById("keyword").value;
+  document.getElementById("keyword").value = "";
+  $("#wordcloud").html("<p class=\"saving\">Loading<span>.</span><span>.</span><span>.</span></p>");
+
+  $("#current_word").text(keyword);
+  update(keyword);
+}
+
+function update(word) {
+    socket.emit('update_required', word);
+}
+
+</script>
+</body>
+</html>

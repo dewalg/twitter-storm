@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Twitter Dashboard</title>
+  <link rel="stylesheet" type="text/css" href="/assets/lib/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="/assets/css/keen-dashboards.css" />
+
+  <link rel="stylesheet" type="text/css" href="css/dash.css">
+  <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+<style>
+#rate{
+    font-size: 55px;
+    font-weight: bold;
+    text-align:center;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body class="application">
+<!-- MY CUSTOM DEPENDCIES -->
+<script src="bower_components/c3/c3.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"> </script>
+<script src="socket.io/socket.io.js"></script>
+<!--%%%%%%%%%%%%%%%%%%%%%-->
+  <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../">
+          <span class="glyphicon glyphicon-chevron-left"></span>
+        </a>
+        <a class="navbar-brand" href="./">Live Twitter Dashboard</a>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-left">
+          <li><a href="/">Main</a></li>
+          <li><a href="/alltweets">Explore All Tweets</a></li>
+          <li><a href="/map">Map</a></li>
+          <li><a href="/cloud">Word Map</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+
+    <div class="row">
+      <div class="col-sm-3">
+        <!-- <div class="chart-wrapper">
+          <div class="chart-title">
+            Tracking Hashtags:
+          </div>
+          <div class="chart-notes">
+              <div id="tracking"></div>
+          </div>
+          <div class="chart-stage">
+            <ul><div id="tweets"></div></ul>
+          </div>
+
+        </div> -->
+        <!-- <div class="col-sm-3"> -->
+          <div class="chart-wrapper">
+            <div class="chart-title">
+              total sentiment/tweets seen
+            </div>
+            <div class="chart-stage">
+                <div id="gauge"></div>
+            </div>
+            <div class="chart-notes">
+              Notes about this chart
+            </div>
+          </div>
+        <!-- </div> -->
+        <!-- <div class="col-sm-3"> -->
+          <div class="chart-wrapper">
+            <div class="chart-title">
+              tweets per sec
+            </div>
+            <div class="chart-stage">
+                <div id="rate"></div>
+            </div>
+            <div class="chart-notes">
+              Notes about this chart
+            </div>
+          </div>
+        <!-- </div> -->
+        <!-- <div class="col-sm-3"> -->
+          <div class="chart-wrapper">
+            <div class="chart-title">
+              top hashtags
+            </div>
+            <div class="chart-stage">
+                <div id="trends">Trending Hashtags being calculated...</div>
+            </div>
+            <div class="chart-notes">
+              Notes about this chart
+            </div>
+          </div>
+        </div>
+      <!-- </div> -->
+
+      <div class="col-sm-9">
+        <div class="row">
+          <div class="col-sm-12">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+              </div>
+              <div class="chart-stage">
+
+                  <div id="chart"></div>
+
+              </div>
+              <div class="chart-notes">
+                Display positive and negative tweets coming in (real time).
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- <div class="row">
+
+        </div> -->
+        <div class="row">
+          <div class="col-sm-8">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Hashtag Frequency
+              </div>
+              <div class="chart-stage">
+
+                  <div id="HTchart"></div>
+
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Tracking Hashtags:
+              </div>
+              <div class="chart-notes">
+                  <div id="tracking"></div>
+              </div>
+              <div class="chart-stage">
+                <ul><div id="tweets"></div></ul>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        <!--<div class="row">
+          <div class="col-sm-4">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Cell 3 Title
+              </div>
+              <div class="chart-stage">
+              </div>
+              <div class="chart-notes">
+                Notes about this chart
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Cell 4 Title
+              </div>
+              <div class="chart-stage">
+                <img data-src="holder.js/100%x120/white">
+              </div>
+              <div class="chart-notes">
+                Notes about this chart
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Cell 5 Title
+              </div>
+              <div class="chart-stage">
+                <img data-src="holder.js/100%x120/white">
+              </div>
+              <div class="chart-notes">
+                Notes about this chart
+              </div>
+            </div>
+          </div>
+        </div>
+         <div class="row">
+          <div class="col-sm-4">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Cell 6 Title
+              </div>
+              <div class="chart-stage">
+                <img data-src="holder.js/100%x120/white">
+              </div>
+              <div class="chart-notes">
+                Notes about this chart
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Cell 7 Title
+              </div>
+              <div class="chart-stage">
+                <img data-src="holder.js/100%x120/white">
+              </div>
+              <div class="chart-notes">
+                Notes about this chart
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-4">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                Cell 8 Title
+              </div>
+              <div class="chart-stage">
+                <img data-src="holder.js/100%x120/white">
+              </div>
+              <div class="chart-notes">
+                Notes about this chart
+              </div>
+            </div>
+          </div>
+        </div> -->
+      </div>
+    </div>
+  </div>
+
+
+
+    <hr>
+
+    <p class="small text-muted">Built by Dewal Gupta [using <a href="https://keen.io">Keen IO</a>]</p>
+
+  </div>
+
+  <!-- <script type="text/javascript" src="/assets/lib/jquery/dist/jquery.min.js"></script> -->
+  <script type="text/javascript" src="/assets/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+  <script type="text/javascript" src="/assets/lib/holderjs/holder.js"></script>
+  <script>
+    Holder.add_theme("white", { background:"#fff", foreground:"#a7a7a7", size:10 });
+  </script>
+
+  <script type="text/javascript" src="/assets/lib/keen-js/dist/keen.min.js"></script>
+  <script type="text/javascript" src="/assets/js/meta.js"></script>
+
+  <script src="htbubble.js"></script>
+  <!-- <script src="sentibar.js"></script> -->
+  <script>
+  var global_watchlist = ['apple'];
+  var trending = new Date();
+  var hts = {};
+  var trendinghts = {};
+  var tweets_seen = [];
+  var pospercent_seen = [];
+
+  function numberWithCommas(x) {
+      return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  var socket = io.connect('http://localhost:8080/main');
+
+  var tdata = [];
+  socket.on('hashtag', function (data2) {
+    displayTrends(data2);
+    var tdata = {"name":"flare", "children":[]};
+    var display = "";
+    var kid = {"name":"analytics", "children":[]};
+
+    for (var i=0; i<data2.length; i++) {
+        kid.children.push({'name':data2[i]['tag'], 'size':data2[i]['count']});
+    }
+
+    tdata.children.push(kid);
+
+    $('#HTchart').val(changebubble(kid));
+
+  });
+
+  function printaverage(data) {
+      while (tweets_seen.length >= 1000) {
+        tweets_seen.splice(0,1);
+      }
+
+      tweets_seen.push(parseInt(data));
+      sum = 0;
+      for (var i=0; i < tweets_seen.length; i++ ) {
+          sum += tweets_seen[i];
+      }
+      $('#rate').html((sum/tweets_seen.length).toFixed(2));
+  }
+
+  function bySortedValue(obj, callback, context) {
+      var tuples = [];
+
+      for (var key in obj) {
+          if (obj[key] !== NaN)
+            tuples.push([key, obj[key]]);
+      }
+
+      tuples.sort(function(a, b) { return a[1] > b[1] ? 1 : a[1] < b[1] ? -1 : 0 });
+
+      var length = tuples.length;
+      while (length--) callback.call(context, tuples[length][0], tuples[length][1]);
+  }
+
+  function displayTrends(data) {
+      d = new Date();
+      var newdata = {};
+      if (d - trending >= 15000) {
+          trending = d;
+
+          for (var i=0; i < data.length; i++) {
+              newdata[data[i]['tag']] = parseInt(data[i]['count']);
+          }
+
+          for (var ht in hts) {
+              if (!(ht in trendinghts)) {
+                  trendinghts[ht] = parseInt(newdata[ht]);
+              } else {
+                  trendinghts[ht] = parseInt(newdata[ht]) - parseInt(hts[ht]);
+              }
+          }
+
+          var y = {};
+          bySortedValue(trendinghts, function(key, value) {
+              y[key] = value;
+          });
+        //   console.log(hts, newdata, y);
+
+          hts = newdata;
+      }
+
+      var displaytrending = ""
+      var i = 1;
+      for(var key in y) {
+          if (i > 5)
+              break;
+
+          displaytrending += "<strong>" + i + ". </strong>#" + "<text onClick=addwatchlist(\'" + key + "\');>" + key + "</text><br>";
+          i++;
+      }
+      if (displaytrending != "")
+        $('#trends').html(displaytrending);
+  }
+
+  function addwatchlist(ht) {
+      if (global_watchlist.indexOf(ht) == -1)
+        global_watchlist.push(ht);
+
+    update_watchlist();
+
+  }
+
+  socket.on('sentiment', function (data) {
+      var d = new Date();
+      var timebase = d.getHours() + '-' + d.getMinutes() + '-' + d.getSeconds();
+      var pos = data[0]['positive'];
+      var neg = data[0]['negative'];
+
+      printaverage(pos+neg);
+      gauge_update(pos/(pos+neg));
+
+      var timeBase = Math.floor(new Date().getTime() / 1000);
+      ndata.push(neg);
+      pdata.push(pos);
+      xdata.push(timebase);
+
+      if (xdata.length >= 60) {
+          pdata.splice(1,1);
+          ndata.splice(1,1);
+          xdata.splice(1,1);
+      }
+
+      chart.load({
+            columns: [
+                xdata,
+                ndata,
+                pdata
+            ]
+      });
+  });
+
+  socket.on('tweets', function (data2) {
+      var toDisplay = '';
+      $.each(data2,function(ind, value){
+          user = value['user'];
+          text = value['text'];
+  		sentiment = value['sentiment'];
+  		var color;
+  		if (sentiment == "0") {
+  			color = "#D57676";
+  		} else {
+  			color = "#76E46E"
+  		}
+          toDisplay += "<li style=\"background:" + color + "\" ><strong>@" + user + "</strong>: " + text + "</li>";
+      });
+      $('#tweets').prepend(toDisplay);
+
+      var HTMLtoPrint = '';
+      for (var i=0; i<global_watchlist.length; i++) {
+          HTMLtoPrint +=  "<div id=\"tracker\" style=\"background:#999999\" >" + global_watchlist[i] + "<img src=\"/assets/img/redx.png\" height=15px width=15px href=\"#\" onClick=\'removeRecord(" + i + ");\'></div>";
+      }
+      $('#tracking').html(HTMLtoPrint);
+
+  });
+
+    function removeRecord (i) {
+      global_watchlist.splice(i, 1);
+      var newtoDisp = "";
+      // re-display the records from foodList the same way we did it in addToFood()
+      for (var i = 0; i < global_watchlist.length; i++) {
+          newtoDisp += "<div id=\"tracker\" style=\"background:#999999\" >" + global_watchlist[i] + "<img src=\"/assets/img/redx.png\" height=15px width=15px href=\"#\" onClick=\'removeRecord(" + i + ");\'></div>";
+      };
+      $('#tracking').html(newtoDisp);
+      update_watchlist();
+  }
+
+  function update_watchlist() {
+      console.log('here');
+      socket.emit('watchlist', global_watchlist);
+  }
+
+  function gauge_update(percentpositive) {
+      while (pospercent_seen.length >= 1000) {
+        pospercent_seen.splice(0,1);
+      }
+      if (isNaN(percentpositive)) {
+          percentpositive = 0;
+      }
+
+      pospercent_seen.push(percentpositive);
+      sum = 0;
+      for (var i=0; i < tweets_seen.length; i++ ) {
+          sum += pospercent_seen[i];
+      }
+
+      percentpositive = (sum/pospercent_seen.length).toFixed(2);
+
+      chart2.load({
+        columns: [[ '% pos tweets', percentpositive*100 ]]
+      });
+  }
+
+    var chart2 = c3.generate({
+      bindto: '#gauge',
+      data: {
+        columns: [
+          [ '% pos tweets', 0]
+        ],
+        type: 'gauge',
+      },
+      gauge: {
+          label: {
+              show: false // to turn off the min/max labels.
+          }
+      },
+      color: {
+        pattern: ['#FF0000', '#F97600', '#F6C600', '#60B044'],
+        threshold: {
+          values: [30, 60, 90, 100]
+        }
+      },
+      size: {
+          height: 120
+      }
+    });
+
+    var pdata = ['pos'];
+    var ndata = ['neg'];
+    var xdata = ['x'];
+
+    var chart = c3.generate({
+        bindto: '#chart',
+        data: {
+            x: 'x',
+           xFormat: '%H-%M-%S', // 'xFormat' can be used as custom format of 'x'
+            columns: [
+                // ['x', '2013-01-01', '2013-01-02', '2013-01-03', '2013-01-04', '2013-01-05', '2013-01-06'],
+                xdata,
+                // ['data1', 30, 200, 100, 400, 150, 250],
+                ndata, pdata
+            ]
+        },
+        axis: {
+            x: {
+                type: 'timeseries',
+                tick: {
+                    format: '%H:%M:%S'
+                }
+            }
+        },
+        transition: {
+            duration: 0
+        }
+    });
+
+
+  </script>
+
+
+</body>
+</html>

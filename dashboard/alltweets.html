@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Twitter Dashboard</title>
+  <link rel="stylesheet" type="text/css" href="/assets/lib/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="/assets/css/keen-dashboards.css" />
+
+  <link rel="stylesheet" type="text/css" href="css/dash.css">
+  <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css">
+
+  <!-- Load d3.js and c3.js -->
+  <script src="/bower_components/d3/d3.min.js" charset="utf-8"></script>
+  <script src="/bower_components/c3/c3.min.js"></script>
+
+  <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script> -->
+  <style>
+  /*.list li {
+      border: 1px dotted black;
+  }*/
+
+#posreach:hover:after, #negreach:hover:after, #posimp:hover:after, #negimp:hover:after {
+    background: #333;
+    background: rgba(0,0,0,.8);
+    border-radius: 5px;
+    bottom: 26px;
+    color: #fff;
+    content: attr(title);
+    left: 20%;
+    padding: 5px 15px;
+    position: absolute;
+    z-index: 98;
+    width: 220px;
+}
+
+#posreach:hover:before, #negreach:hover:before, #posimp:hover:before, #negimp:hover:before{
+    border: solid;
+    border-color: #333 transparent;
+    border-width: 6px 6px 0 6px;
+    bottom: 20px;
+    content: "";
+    left: 50%;
+    position: absolute;
+    z-index: 99;
+}
+
+  img {
+    vertical-align: text-bottom;
+    margin: 0px -5px 0px 5px;
+    }
+  #top, #tweets_by_user li {
+        /*border: 1px dotted black;*/
+        display: block;
+        padding-left: 10px;
+        overflow-y: hidden;
+        overflow-x: hidden;
+    }
+    text, #pagination {
+        font: 10px "Helvetica Neue", Helvetica, Arial, sans-serif;
+        text-anchor: middle;
+        pointer-events: none;
+        fill: grey;
+    }
+    #reach, #impress {
+        font-size: 55px;
+        font-weight: bold;
+        text-align:center;
+        margin-top: 10px;
+    }
+
+    .chart-stage {
+        min-height: 130px;
+        /*max-height: 500px;*/
+        overflow-x: hidden;
+    }
+
+    .chart-title {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    #pagination {
+        margin-left: 10px;
+        display: inline;
+    }
+    #pagemove {
+        display: inline;
+        float: right;
+        /*margin-left: 150px;*/
+    }
+  </style>
+
+</head>
+
+<body class="application">
+<!-- MY CUSTOM DEPENDCIES -->
+<script src="socket.io/socket.io.js"></script>
+<!--%%%%%%%%%%%%%%%%%%%%%-->
+  <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../">
+          <span class="glyphicon glyphicon-chevron-left"></span>
+        </a>
+        <a class="navbar-brand" href="./">Live Twitter Dashboard</a>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-left">
+          <li><a href="/">Main</a></li>
+          <li><a href="/alltweets">Explore All Tweets</a></li>
+          <li><a href="/map">Map</a></li>
+          <li><a href="/cloud">Word Map</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+
+    <div class="row"><br>
+      <div class="col-sm-3">
+          <div class="chart-wrapper">
+            <div class="chart-title">Search/Filter Tweets
+            </div><div class="chart-stage">
+            <button onclick="update()">Update Results</button><br><br><form name="todisp">
+            Display:<br>
+                      <input type="radio" name="num_todisp" id="10" checked="checked">10
+                      <input type="radio" name="num_todisp" id="50">50
+                      <input type="radio" name="num_todisp" id="100">100
+                      <input type="radio" name="num_todisp" id="1000">1000
+                      <input type="radio" name="num_todisp" id="10000">10000
+                    </form>
+                    <br>
+            Filter by Keyword, Mention or Hashtag:
+                <form action="javascript:addKeyword();">
+                    <input type="text" id="keyword"
+                    style="width:280; height:50;">
+                </form>
+
+            </div>
+            <div class="chart-notes">
+                <div id="tracking"></div>
+
+            </div>
+
+
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-title"><div id="tweets_by_user_title"></div>
+            </div><div class="chart-stage">
+                <div id="tweets_by_user" style = "max-height: 700px; overflow:scroll;"></div>
+            </div>
+            <div class="chart-notes">Tweets by Tweeters. (Click on name to see)
+            </div>
+
+
+          </div>
+  </div>
+      <div class="col-sm-9">
+        <!-- <div class="row">
+          <div class="col-sm-12">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+              </div>
+              <div class="chart-stage">
+
+              </div>
+              <div class="chart-notes">
+              </div>
+            </div>
+          </div>
+        </div> -->
+        <!-- @@@@@@@@@@@@@@@@@@ ROW @@@@@@@@@@@@@@@@ -->
+        <div class="row">
+            <div class="col-sm-4">
+              <div class="chart-wrapper">
+                <div class="chart-title">
+                  Percent of Positive Tweets
+                </div>
+                <div class="chart-stage">
+                  <div id="gauge"></div>
+                </div>
+                <div class="chart-notes">
+                    Ratio of positive to negative tweets.
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="chart-wrapper">
+                <div class="chart-title">
+                  Potential Reach
+                </div>
+                <div class="chart-stage">
+                    <div id="reach"></div><center><font size=0.75px color="grey">people</font></center>
+                        <div id="posreach" style="background:green; position:absolute; width:134px; height:4px;" title="positive tweets reach"></div>
+                        <div id="negreach" title="negative tweets reach" style="background:red; position:inline; width:268px; height:4px;"></div>
+                </div>
+                <div class="chart-notes">Number of unique people brand has reached.
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <div class="chart-wrapper">
+                <div class="chart-title">
+                  Potential Impressions
+                </div>
+                <div class="chart-stage">
+                    <div id="impress"></div><center><font size=0.75px color="grey">Impressions</font></center>
+                    <div id="posimp" style="background:green; position:absolute; width:134px; height:4px;" title="positive tweets impressions"></div>
+                    <div id="negimp" title="negative tweets impressions" style="background:red; position:inline; width:268px; height:4px;"></div>
+                </div>
+                <div class="chart-notes">
+                  Number of times brand is seen.
+                </div>
+              </div>
+            </div>
+
+           </div>
+           <!-- @@@@@@@@@@@@@@@@@@ ROW @@@@@@@@@@@@@@@@ -->
+           <div class="row">
+               <div class="col-sm-8">
+                 <div class="chart-wrapper">
+                   <div class="chart-title">
+                       Frequency of tweets
+                   </div>
+                   <div class="chart-stage">
+                       <div id="timehist"></div>
+                   </div>
+                   <div class="chart-notes">
+                     Number of tweets per second.
+                   </div>
+                 </div>
+               </div>
+               <div class="col-sm-4">
+                 <div class="chart-wrapper">
+                   <div class="chart-title">
+                     Most Popular Tweeters
+                   </div>
+                   <div class="chart-stage">
+                     <div id="top"></div><br>
+                   </div>
+                   <div class="chart-notes">
+                       Ranked by number of followers.
+                   </div>
+                 </div>
+               </div>
+           </div>
+           <!-- @@@@@@@@@@@@@@@@@@ ROW @@@@@@@@@@@@@@@@ -->
+        <div class="row">
+          <div class="col-sm-12">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                  All tweets <div id="pagination"></div> <div id="pagemove"> <a onClick="paginate('prev')">prev</a> | <a onClick="paginate('next')">next</a></div>
+              </div>
+              <div class="chart-stage">
+                  <ul><div id="list" style="width: 870px; height: 500px; overflow: scroll;">
+                  </div></ul>
+              </div>
+
+            </div>
+          </div>
+          <!---->
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+
+    <hr>
+
+    <p class="small text-muted">Built by Dewal Gupta [using <a href="https://keen.io">Keen IO</a>]</p>
+
+  </div>
+
+  <script type="text/javascript" src="/assets/lib/jquery/dist/jquery.min.js"></script>
+  <script type="text/javascript" src="/assets/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+  <script type="text/javascript" src="/assets/lib/holderjs/holder.js"></script>
+  <script>
+    Holder.add_theme("white", { background:"#fff", foreground:"#a7a7a7", size:10 });
+  </script>
+
+  <script type="text/javascript" src="/assets/lib/keen-js/dist/keen.min.js"></script>
+  <script type="text/javascript" src="/assets/js/meta.js"></script>
+  <script>
+
+  var searchlist = [];
+  var toDisplay = [];
+  var page = 0;
+
+  function numberWithCommas(x) {
+      return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function addKeyword() {
+      var keyword = document.getElementById("keyword").value;
+      if (searchlist.indexOf(keyword) == -1) {
+          searchlist.push(keyword);
+      }
+      document.getElementById("keyword").value = "";
+      update();
+  }
+
+  var rad = document.todisp.num_todisp;
+  var prev = null;
+  for(var i = 0; i < rad.length; i++) {
+    rad[i].onclick = function() {
+        update();
+    };
+  }
+
+  function numtodisp() {
+    if (document.getElementById("10").checked)
+        return 10;
+    if (document.getElementById("50").checked)
+        return 50;
+    if (document.getElementById("100").checked)
+        return 100;
+    if (document.getElementById("1000").checked)
+        return 1000;
+    if (document.getElementById("10000").checked)
+        return 100000;
+
+    return 10;
+  }
+
+  function parseTwitterDate(tdate) {
+      var system_date = new Date(Date.parse(tdate));
+      var user_date = new Date();
+
+
+      var diff = Math.floor((user_date - system_date) / 1000);
+      if (diff <= 1) {return "just now";}
+      if (diff < 20) {return diff + " seconds ago";}
+      if (diff < 40) {return "half a minute ago";}
+      if (diff < 60) {return "less than a minute ago";}
+      if (diff <= 90) {return "one minute ago";}
+      if (diff <= 3540) {return Math.round(diff / 60) + " minutes ago";}
+      if (diff <= 5400) {return "1 hour ago";}
+      if (diff <= 86400) {return Math.round(diff / 3600) + " hours ago";}
+      if (diff <= 129600) {return "1 day ago";}
+      if (diff < 604800) {return Math.round(diff / 86400) + " days ago";}
+      if (diff <= 777600) {return "1 week ago";}
+      return "on " + system_date;
+  }
+  var socket = io.connect('http://localhost:8080/alltweets');
+  socket.on('alltweets', function(data) {
+        toDisplay = [];
+        var count = 1;
+        var sent_count = 0;
+        var mostpopular = [];
+        var reach = 0;
+        var timedata = [];
+        var impressions = 0;
+        var pos_reach = 0;
+        var pos_imp = 0;
+
+        for(var i=data.length-1; i>=0; i--) {
+            var user = data[i]['user'];
+            var text = data[i]['text'];
+            var sentiment = data[i]['sentiment'];
+            var num_followers = data[i]['followers'];
+            var time = data[i]['time']; //time is a string here, not Date object!
+
+            var notrelevant = true;
+            for (var j=0; j<searchlist.length; j++) {
+              if (text.toLowerCase().indexOf(searchlist[j].toLowerCase()) > -1) {
+                  notrelevant = false;
+                  break;
+              }
+            }
+            if (notrelevant && searchlist.length) {
+              continue;
+            }
+
+            var toAdd = true;
+            for (var k=0; k < mostpopular.length; k++) {
+                if (mostpopular[k][0] == user) {
+                    toAdd = false;
+                    break;
+                }
+            }
+            if (toAdd) {
+                if (sentiment == 1)
+                  pos_reach += num_followers;
+
+                reach += num_followers;
+                mostpopular.push([user, num_followers]);
+                mostpopular.sort(function(a, b) { return b[1] - a[1]});
+            }
+
+            var date = parseTwitterDate(time);
+            var color = "red";
+            if (sentiment == 1) {
+              pos_imp += num_followers;
+              sent_count++;
+              color = "green";
+            }
+
+            impressions += num_followers;
+            timedata.push(time);
+
+            toDisplay.push("<li style=\"border-left: 3px solid " + color + "; \"><strong onClick=showTop(\'" + user + "\');>@" + user + "</strong>  <font size=0.75px color=\"grey\">" + num_followers + " followers | " + date + "</font><br> " + text + "</li><br>");
+
+            if (count == numtodisp()) {
+              break;
+            }
+            count++;
+        }
+        console.log("currently showing: " + count);
+
+      var HTMLtoPrint = '';
+      for (var i=0; i<searchlist.length; i++) {
+          HTMLtoPrint +=  "<div id=\"tracker\" style=\"background:#d1d1d1\" >" + searchlist[i] + "<img src=\"/assets/img/redx.png\" height=15px width=15px href=\"#\" onClick=\'removeRecord(" + i + ");\'></div>";
+      }
+    //   console.log(Math.round(pos_reach/reach*268));
+
+      $('#posreach').width( Math.round(pos_reach/reach*268));
+      $('#posimp').width( Math.round(pos_imp/impressions*268));
+
+      //put in negative and positive impressions
+      //put in link to click to see what top tweeters said
+
+      var popz = '';
+      var limit = Math.min(5, mostpopular.length);
+      for (var i=0; i<limit; i++) {
+         var x = mostpopular[i][0]
+          popz += "<div id=\"pop\" style=\"border: 1px;\" onClick=showTop(\'" + x + "\');><strong>@" + mostpopular[i][0] + "</strong>  <font size=0.75px color=\"grey\">" + mostpopular[i][1] + "</font></div>";
+      }
+
+
+      $('#tracking').html(HTMLtoPrint);
+      $('#top').html(popz);
+      $('#impress').html(numberWithCommas(impressions));
+      paginate('');
+    //   $('#list').html(toDisplay);
+      $('#reach').html(numberWithCommas(reach));
+      sent_count = sent_count/(count-1);
+      gauge_update(sent_count);
+      binning(timedata);
+  });
+
+function paginate(msg) {
+    var PAGE_LIMIT = 100;
+    if (toDisplay.length > 3000)
+        PAGE_LIMIT = 1000;
+
+    if (msg == '') {
+        page = 0;
+        var x = toDisplay.slice(0,PAGE_LIMIT);
+        var limit = Math.min(toDisplay.length, PAGE_LIMIT);
+        $('#list').html(x);
+        $('#pagination').text(' [tweets ' + numberWithCommas(page+1) + ' to ' + numberWithCommas(limit) + ' out of ' + numberWithCommas(toDisplay.length) +']');
+    }
+    if (msg == 'next') {
+        console.log('next: ' + page );
+        page += PAGE_LIMIT;
+        var x = toDisplay.slice(page,page+PAGE_LIMIT);
+        if (x.length == 0) {
+            page -= PAGE_LIMIT;
+            return;
+        }
+        var limit = Math.min(toDisplay.length, page+PAGE_LIMIT);
+
+        $('#list').html(x);
+        $('#pagination').text(' [tweets ' + numberWithCommas(page+1) + ' to ' + numberWithCommas(limit) + ' out of ' + numberWithCommas(toDisplay.length)+']');
+    }
+    if (msg == 'prev') {
+        if (page <= 0)
+            return
+        console.log('prev: ' + page );
+        page -= PAGE_LIMIT;
+        var x = toDisplay.slice(page,page+PAGE_LIMIT);
+        var limit = Math.min(toDisplay.length, page+PAGE_LIMIT);
+
+        $('#list').html(x);
+        $('#pagination').text(' [tweets ' + numberWithCommas(page+1) + ' to ' + numberWithCommas(limit) + ' out of ' + numberWithCommas(toDisplay.length)+']');
+    }
+}
+
+function showTop(user) {
+    socket.emit('tweets_by_user', user);
+    $('#tweets_by_user_title').html("<strong>@" + user + "</strong>");
+}
+
+socket.on('tweets_by_user', function(data) {
+    $('#tweets_by_user').html(data);
+});
+
+function removeRecord (i) {
+    searchlist.splice(i, 1);
+    var newtoDisp = "";
+    // re-display the records from foodList the same way we did it in addToFood()
+    for (var i = 0; i < searchlist.length; i++) {
+        newtoDisp += "<div id=\"tracker\" style=\"background:#d1d1d1\" >   " + searchlist[i] + "  <img src=\"/assets/img/redx.png\" height=15px width=15px href=\"#\" onClick=\'removeRecord(" + i + ");\'></div>";
+    };
+    $('#tracking').html(newtoDisp);
+    update();
+}
+
+function update() {
+    socket.emit('update_required', "test");
+}
+
+function gauge_update(percentpositive) {
+    chart.load({
+      columns: [[ '% pos tweets', (percentpositive*100).toFixed(2) ]]
+    });
+}
+
+  var chart = c3.generate({
+    bindto: '#gauge',
+    data: {
+      columns: [
+        [ '% pos tweets', 0]
+      ],
+      type: 'gauge',
+    },
+    gauge: {
+        label: {
+            show: false // to turn off the min/max labels.
+        }
+    },
+    color: {
+      pattern: ['#FF0000', '#F97600', '#F6C600', '#60B044'],
+      threshold: {
+        values: [30, 60, 90, 100]
+      }
+    },
+    size: {
+        height: 120
+    }
+  });
+
+function binning(timeseries) {
+    var jump = 1;
+    times = [];
+    for (var i=0; i<timeseries.length; i++) {
+        time = new Date(timeseries[i]);
+        times.push(time);
+    }
+    var maxDate=new Date(Math.max.apply(null,times));
+    var minDate=new Date(Math.min.apply(null,times));
+
+    buckets_x = [];
+    buckets_y = [];
+    // console.log(maxDate-minDate);
+    if (maxDate - minDate > 300000)
+        jump = 10;
+    if (maxDate - minDate > 1800000)
+        jump = 30;
+    if (maxDate - minDate > 3600000)
+        jump = 60;
+
+
+    for (var d = minDate; d <= maxDate; d.setSeconds(d.getSeconds() + jump)) {
+        buckets_x.push(new Date(d));
+        buckets_y.push(0);
+        for (var i=0; i<times.length; i++) {
+            var x = new Date(times[i]);
+            var maxdate = new Date(d);
+            if (x >= d && x <  maxdate.setSeconds(d.getSeconds() + jump)) {
+
+                buckets_y[buckets_y.length-1]++;
+            }
+        }
+    }
+
+    for (var i=0; i<buckets_x.length; i++) {
+        var d = new Date(buckets_x[i]);
+        var formatted = d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds();
+        buckets_x[i] = formatted;
+    }
+
+    buckets_x.splice(0,0,'x');
+    // buckets_y = buckets_y.slice(min_time, max_time+1);
+    buckets_y.splice(0,0,'# tweets');
+
+    timechart.load({
+      columns: [buckets_x, buckets_y]
+    });
+}
+
+var timechart = c3.generate({
+   bindto: '#timehist',
+   data: {
+       x: 'x',
+       xFormat: '%H:%M:%S',
+       columns: [
+           ['x',0],
+           ['# tweets', 0],
+       ],
+       types: {
+           '# tweets': 'area-spline',
+           // 'line', 'spline', 'step', 'area', 'area-step' are also available to stack
+       },
+   },
+   legend: {
+       show:false
+   },
+   axis: {
+   x: {
+       type: 'timeseries',
+       tick: {
+           format: '%H:%M:%S'
+       }
+   },
+    y: {
+        padding: {
+            top: 10,
+            bottom: 10
+        },
+        tick: {
+            format: function (d) { if(d%2 == 0){return d;} }
+        }
+    }
+    },
+   size: {
+       height: 120
+   },
+   point: {
+       show: false
+    }
+});
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "dashboard",
+  "main": "index.js",
+  "version": "0.0.0",
+  "authors": [
+    "dewal gupta <dewalgupta@gmail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "c3": "~0.4.10"
+  }
+}

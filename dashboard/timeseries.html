@@ -1,0 +1,76 @@
+<html>
+<head>
+
+      <link rel="stylesheet" type="text/css" href="/public/css/dash.css">
+      <link href="public/bower_components/c3/c3.css" rel="stylesheet" type="text/css">
+
+      <!-- Load d3.js and c3.js -->
+      <script src="public/bower_components/d3/d3.min.js" charset="utf-8"></script>
+      <script src="public/bower_components/c3/c3.min.js"></script>
+      <script src="public/socket.io.js"></script>
+
+</head>
+<body>
+<div id="chart"></div>
+<script>
+var pdata = ['pos'];
+var ndata = ['neg'];
+var xdata = ['x'];
+
+var chart = c3.generate({
+    bindto: '#chart',
+    data: {
+        x: 'x',
+       xFormat: '%H-%M-%S', // 'xFormat' can be used as custom format of 'x'
+        columns: [
+            // ['x', '2013-01-01', '2013-01-02', '2013-01-03', '2013-01-04', '2013-01-05', '2013-01-06'],
+            xdata,
+            // ['data1', 30, 200, 100, 400, 150, 250],
+            ndata, pdata
+        ]
+    },
+    axis: {
+        x: {
+            type: 'timeseries',
+            tick: {
+                format: '%H:%M:%S'
+            }
+        }
+    },
+    transition: {
+        duration: 0
+    }
+});
+
+var socket = io.connect('http://localhost:8080/main');
+
+socket.on('sentiment', function (data) {
+    var d = new Date();
+    var timebase = d.getHours() + '-' + d.getMinutes() + '-' + d.getSeconds();
+    var pos = data[0]['positive'];
+    var neg = data[0]['negative'];
+
+    var timeBase = Math.floor(new Date().getTime() / 1000);
+    ndata.push(neg);
+    pdata.push(pos);
+    xdata.push(timebase);
+
+    if (xdata.length >= 60) {
+        pdata.splice(1,1);
+        ndata.splice(1,1);
+        xdata.splice(1,1);
+    }
+
+    console.log(xdata.length);
+    chart.load({
+          columns: [
+              xdata,
+              ndata,
+              pdata
+          ]
+    });
+});
+
+</script>
+</body>
+</html>

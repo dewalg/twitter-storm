@@ -1,0 +1,71 @@
+<!doctype html>
+<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/src/css/graph.css">
+
+<script src="http://code.shutterstock.com/rickshaw/vendor/d3.v3.js"></script>
+<script src="http://code.shutterstock.com/rickshaw/rickshaw.js"></script>
+<script src="../vendor/d3.min.js"></script>
+<script src="../vendor/d3.layout.min.js"></script>
+<script src="../rickshaw.min.js"></script>
+
+<div id="chart"></div>
+<div id="preview"></div>
+<script src="public/socket.io.js"></script>
+
+<script>
+var socket = io.connect('http://localhost:8080');
+
+var timeBase = Math.floor(new Date().getTime() / 1000);
+var seriesData = [ [{x:timeBase, y:0}], [{x:timeBase, y:0}] ];
+
+var pos=0;
+var neg=0;
+socket.on('sentiment', function (data) {
+	var pos_new = data[0]['positive'];
+	var neg_new = data[0]['negative'];
+	//
+	// p_diff = pos_new - pos;
+	// n_diff = neg_new - neg;
+	// pos = pos_new;
+	// neg = neg_new;
+	n_diff = neg_new;
+	p_diff = pos_new;
+
+	var timeBase = Math.floor(new Date().getTime() / 1000);
+	seriesData[0].push({x:timeBase, y:n_diff});
+	seriesData[1].push({x:timeBase, y:p_diff});
+
+	if (seriesData[0].length >= 50) {
+		seriesData[0].shift();
+		seriesData[1].shift();
+	}
+	graph.update();
+});
+
+var graph = new Rickshaw.Graph( {
+	element: document.getElementById("chart"),
+	renderer: 'bar',
+	series: [
+		{
+			data: seriesData[0],
+			color: 'steelblue'
+		}, {
+			data: seriesData[1],
+			color: 'lightblue'
+		}
+	]
+} );
+var resize = function() {
+	graph.configure({
+		width: window.innerWidth * 0.75,
+		height: window.innerHeight * 0.75
+	});
+	graph.render();
+}
+var preview = new Rickshaw.Graph.RangeSlider.Preview({
+	graph: graph,
+	element: document.getElementById('preview')
+});
+
+window.addEventListener('resize', resize);
+resize();
+</script>

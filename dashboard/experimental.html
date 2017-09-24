@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Live Twitter Dashboard</title>
+  <link rel="stylesheet" type="text/css" href="/assets/lib/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="/assets/css/keen-dashboards.css" />
+
+  <!-- <link rel="stylesheet" type="text/css" href="css/dash.css"> -->
+  <!-- <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css"> -->
+
+  <link rel="stylesheet" type="text/css" href="/bower_components/dcjs/dc.css"/>
+
+</head>
+
+<body class="application">
+<!-- MY CUSTOM DEPENDCIES -->
+<script src="socket.io/socket.io.js"></script>
+<!--%%%%%%%%%%%%%%%%%%%%%-->
+  <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../">
+          <span class="glyphicon glyphicon-chevron-left"></span>
+        </a>
+        <a class="navbar-brand" href="./">Live Twitter Dashboard</a>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-left">
+          <li><a href="/">Main</a></li>
+          <li><a href="/alltweets">Explore All Tweets</a></li>
+          <li><a href="/map">Map</a></li>
+          <li><a href="/cloud">Word Map</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+      <div class="row">
+          <div class="col-sm-3">
+              <div class="chart-wrapper">
+                <div class="chart-title">Total Reach
+                </div><div class="chart-stage">
+
+                    <div class='dc-data-count'>
+                        <span class='filter-count'></span>
+                    </div>
+
+                </div>
+                <div class="chart-notes">
+                </div>
+              </div>
+          </div>
+          <div class="col-sm-9">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                  All tweets
+              </div>
+
+              <div class="chart-stage">
+                  <div id="monthly-move-chart">
+                        <strong>Hashtags</strong> (radius: positive hashtag freq., color: sentiment ratio)
+                        <a class="reset" href="javascript:barChart.filterAll();dc.redrawAll();"
+                           style="display: none;">reset</a>
+                   </div>
+                   <br><br>
+
+              </div>
+
+            </div>
+          </div>
+      </div>
+    <div class="row">
+      <!-- <div class="col-sm-12"> -->
+
+           <!-- @@@@@@@@@@@@@@@@@@ ROW @@@@@@@@@@@@@@@@ -->
+        <!-- <div class="row"> -->
+            <div class="col-sm-3">
+                <div class="chart-wrapper">
+                  <!-- <div class="chart-title">Word Cloud</div> -->
+                  <div class="chart-stage">
+                      <div id="gain-loss-chart">
+                           <strong>Tweets By Sentiment</strong>
+                           <a class="reset" href="javascript:gainOrLossChart.filterAll();dc.redrawAll();" style="display: none;">reset</a><br>
+                       </div>
+                  </div>
+                  <div class="chart-notes">
+                  </div>
+                </div>
+            </div>
+          <div class="col-sm-9">
+            <div class="chart-wrapper">
+              <div class="chart-title">
+                  All tweets
+              </div>
+              <div class="chart-stage">
+                  <div id="yearly-bubble-chart">
+                        <strong>Hashtags</strong> (radius: positive hashtag freq., color: sentiment ratio)
+                        <a class="reset" href="javascript:yearlyBubbleChart.filterAll();dc.redrawAll();"
+                           style="display: none;">reset</a>
+                   </div>
+                   <br><br>
+
+              </div>
+
+            </div>
+          </div>
+        <!-- </div> -->
+
+      <!-- </div> -->
+    </div>
+
+  </div>
+
+
+
+<hr>
+
+<p class="small text-muted">Built by Dewal Gupta [using <a href="https://keen.io">Keen IO</a>]</p>
+
+</div>
+
+<script type="text/javascript" src="/assets/lib/jquery/dist/jquery.min.js"></script>
+<script type="text/javascript" src="/assets/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+<script type="text/javascript" src="/assets/lib/holderjs/holder.js"></script>
+<script>
+Holder.add_theme("white", { background:"#fff", foreground:"#a7a7a7", size:10 });
+</script>
+
+<script type="text/javascript" src="/assets/lib/keen-js/dist/keen.min.js"></script>
+<script type="text/javascript" src="/assets/js/meta.js"></script>
+
+<script type="text/javascript" src="/bower_components/d3/d3.js"></script>
+<script type="text/javascript" src="/bower_components/crossfilter/crossfilter.js"></script>
+<script type="text/javascript" src="/bower_components/dcjs/dc.js"></script>
+<script type="text/javascript" src="/colorbrewer.js"></script>
+<script>
+var data = [];
+var maxdate = new Date();
+var mindate = new Date();
+
+var gainOrLossChart = dc.pieChart('#gain-loss-chart');
+// var fluctuationChart = dc.barChart('#fluctuation-chart');
+// var quarterChart = dc.pieChart('#quarter-chart');
+// var dayOfWeekChart = dc.rowChart('#day-of-week-chart');
+var barChart = dc.barChart('#monthly-move-chart');
+// var volumeChart = dc.barChart('#monthly-move-chart');
+var yearlyBubbleChart = dc.bubbleChart('#yearly-bubble-chart');
+var nasdaqCount = dc.dataCount('.dc-data-count');
+// var nasdaqTable = dc.dataTable('.dc-data-table');
+
+/*
+hashtag, time, id, sentiment, text, user, fol_count
+*/
+
+
+
+// var data = [{'date': '2015-09-23 05:37:15+0000', 'sentiment':'1', 'user': 'whiteprincessy', 'text': 'rt @real_liam_payne: you can now preorder made in the a.m. and get infinity off the album now! https://t.co/ombkndt5cu', 'fol_count': 54, 'hashtag':'juice'},
+// {'date': '2015-09-23 05:40:15+0000', 'sentiment':'0', 'user': 'dg', 'text': 'hope this works.', 'fol_count': 20000, 'hashtag':'juice', 'id': '1'},
+// {'date': '2015-09-23 05:40:15+0000', 'sentiment':'1', 'user': 'dg', 'text': 'hope this works.', 'fol_count': 20, 'hashtag':'juice', 'id': '2'},
+// {'date': '2015-09-23 05:40:15+0000', 'sentiment':'1', 'user': 'dg', 'text': 'hope this works.', 'fol_count': 20, 'hashtag':'juice', 'id': '1'},
+// {'date': '2015-09-23 05:45:15+0000', 'sentiment':'0', 'user': 'dewal', 'text': 'blah blah', 'fol_count': 3, 'hashtag':'test1', 'id': '2'},
+// {'date': '2015-09-23 05:39:15+0000', 'sentiment':'1', 'user': 'dgupta', 'text': 'wow hello world', 'fol_count': 103, 'hashtag':'test2', 'id': '12'},
+// ]
+
+
+var dateFormat = d3.time.format("%X");
+var newFormat = d3.time.format("%Y-%m-%dT%H:%M:%S");
+// var numberFormat = d3.format('.2f');
+
+data.forEach(function (d) {
+        // d.month = d3.time.month(d.dd); // pre-calculate month for better performance
+        d.sentiment = +d.sentiment;
+        d.time = newFormat.parse(d.date.substr(0,19));
+        // d.date = new Date(d.date);
+        // var date = new Date(d.date).getSeconds();
+        // console.log(d.date);
+    });
+
+var ndx = crossfilter(data);
+var all = ndx.groupAll();
+var count = ndx.groupAll().reduceSum(function(d) {
+    return d.fol_count;
+});
+
+/*#####################################################*/
+
+var sentiment = ndx.dimension(function (d) {
+   return d.sentiment ? 'Positive' : 'Negative';
+});
+
+var pieGroup = sentiment.group();
+
+gainOrLossChart
+    .width(180)
+    .height(180)
+    .dimension(sentiment)
+    .group(pieGroup)
+    .label(function (d) {
+        return d.data.key;
+    });
+
+/*#####################################################*/
+
+var timex = ndx.dimension(function(d) {
+    return d3.time.minute(d.time);
+});
+
+var timechart = timex.group().reduceCount(
+    function(d) { return d.time; }
+);
+
+// var barChart = dc.barChart("#monthly-move-chart");
+barChart
+    .width(960)
+    .height(100)
+    // .renderArea(true)
+    // .mouseZoomable(true)
+    .elasticY(true)
+    .dimension(timex)
+    .group(timechart)
+    // .xUnits(d3.time.hour)
+    .x(d3.time.scale().domain([new Date(2015, 08, 24), new Date(2015,08,30)]));
+
+
+/*#####################################################*/
+var dim = ndx.dimension(function(d) {
+    return d.fol_count;
+});
+var r = dim.group().reduceSum(function(d) {
+    return d.fol_count;
+});
+
+// $('#reach-count').text(r.value());
+nasdaqCount /* dc.dataCount('.dc-data-count', 'chartGroup'); */
+    .dimension(ndx)
+    .group(count);
+
+/*#####################################################*/
+
+var htDimension = ndx.dimension(function (d) {
+    return d.hashtag;
+});
+
+var yearlyPerformanceGroup = htDimension.group().reduce(
+   /* callback for when data is added to the current filter results */
+    function (p, v) {
+        ++p.count;
+        p.senti += v.sentiment;
+        p.avg_sent = p.count ? p.senti / p.count : 0;
+        p.reach += v.fol_count;
+        p.avg_reach = p.count ? p.reach / p.count : 0;
+        return p;
+    },
+    /* callback for when data is removed from the current filter results */
+    function (p, v) {
+        --p.count;
+        p.senti -= v.sentiment;
+        p.avg_sent = p.count ? p.senti / p.count : 0;
+        p.reach -= v.fol_count;
+        p.avg_reach = p.count ? p.reach / p.count : 0;
+        return p;
+    },
+    /* initialize p */
+    function () {
+        return {
+            count: 0,
+            senti: 0,
+            avg_sent: 0,
+            reach: 0,
+            avg_reach: 0,
+        };
+    }
+);
+
+yearlyBubbleChart
+   .width(900)
+   .height(500)
+   .transitionDuration(1500)
+    .margins({top: 10, right: 50, bottom: 40, left: 40})
+    .dimension(htDimension)
+    .group(yearlyPerformanceGroup)
+    .colors(colorbrewer.RdYlGn[9])
+    .colorDomain([0,100])
+    .colorAccessor(function (p) {
+            return p.value.avg_sent*100;
+    })
+    .keyAccessor(function (p) {
+            return (2* p.value.senti - p.value.count);
+    })
+    .valueAccessor(function (p) {
+            return p.value.count;
+    })
+    .radiusValueAccessor(function (p) {
+            return p.value.count;
+    })
+    .x(d3.scale.linear().domain([-10, 100]))
+    .y(d3.scale.linear().domain([0,1000]))
+    .r(d3.scale.linear().domain([0, 1000]))
+    .xAxisLabel('Positive - Negative Tweets')
+    .yAxisLabel('Hashtag Count')
+
+    .elasticY(true)
+    .elasticX(true)
+    .yAxisPadding(50)
+    .xAxisPadding(50)
+    .renderHorizontalGridLines(true)
+    .renderVerticalGridLines(true)
+    .renderTitle(true)
+    .renderLabel(true)
+    .label(function (p) {
+        return p.key;
+    })
+    .title(function (p) {
+        return [
+            p.key,
+            'Total Count: ' + p.value.count.toFixed(2),
+            'Positive Freq: ' + p.value.avg_sent.toFixed(2),
+            'Total Reach: ' + p.value.reach
+        ].join('\n');
+    })
+    .yAxisMin(0);
+
+dc.renderAll();
+
+var socket = io.connect('http://localhost:8080/tag');
+socket.on('tags', function(d) {
+
+    d.forEach(function (data) {
+        data.sentiment = +data.sentiment;
+        data.time = newFormat.parse(data.date.substr(0,19));
+        // data.date = new Date(data.date);
+    });
+
+    ndx.add(d);
+    dc.redrawAll();
+});
+
+socket.emit('update');
+
+</script>
+</body>
+</html>

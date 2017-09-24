@@ -1,0 +1,46 @@
+<html>
+  <head>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script>
+geocoder = new google.maps.Geocoder();
+
+function codeLatLng(lat, lng, callback) {
+    var latlng = new google.maps.LatLng(lat, lng);
+    geocoder.geocode({'latLng': latlng}, function(results, status) {
+        if (status == google.maps.GeocoderStatus.OK) {
+            var result;
+            if (results.length > 1)
+                result = results[1];
+            else
+                result = results[0];
+
+            var x = displayPostcode(results[0].address_components);
+            callback(x);
+
+        } else {
+            console.log('Geocoder failed due to: ' + status);
+        }
+    });
+}
+
+function displayPostcode(address) {
+  for (p = address.length-1; p >= 0; p--) {
+    if (address[p].types.indexOf("administrative_area_level_2") != -1) {
+       return address[p].long_name;
+    }
+  }
+}
+
+testset = [{'lat':28.6139, 'long':77.2090}, {'lat':18.9750, 'long':72.8258}, {'lat':28.4700, 'long':77.0300}];
+
+for (var i=0; i<testset.length; i++ ) {
+    codeLatLng(testset[i]['lat'], testset[i]['long'], function(location) {
+        console.log(location);
+    });
+}
+
+</script>
+
+</head>
+
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Twitter Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="/assets/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/assets/css/keen-dashboards.css" />
+
+    <link rel="stylesheet" type="text/css" href="css/dash.css">
+    <link href="bower_components/c3/c3.css" rel="stylesheet" type="text/css">
+
+  <!-- Load d3.js and c3.js -->
+    <script src="bower_components/d3/d3.min.js" charset="utf-8"></script>
+    <script src="bower_components/c3/c3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <script src="http://openlayers.org/api/OpenLayers.js"></script>
+    <script src="mapindia.js"></script>
+    <script src="cities.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+    <style>
+    .subunit-boundary-2 {
+        fill: none;
+        stroke: #474747;
+        opacity: 0.2;
+        stroke-width: 1;
+    }
+    .subunit-boundary{
+        fill: none;
+        stroke: black;
+        stroke-width: 2;
+    }
+
+    text {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+</style>
+
+</head>
+
+<body class="application">
+
+
+
+
+
+
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="../">
+            <span class="glyphicon glyphicon-chevron-left"></span>
+          </a>
+          <a class="navbar-brand" href="./">Live Twitter Dashboard</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-left">
+            <li><a href="/">Main</a></li>
+            <li><a href="/alltweets">Explore All Tweets</a></li>
+            <li><a href="/map">Map</a></li>
+            <li><a href="#">Community</a></li>
+            <li><a href="#">Technical Support</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container-fluid">
+
+      <div class="row"><br>
+          <div class="col-sm-3">
+               <!-- @@@@@@@@@@@@@@@@@@ ROW @@@@@@@@@@@@@@@@ -->
+
+            <div class="row">
+              <div class="col-sm-12">
+                <div class="chart-wrapper">
+                  <div class="chart-title">
+                      Map
+                  </div>
+                  <div class="chart-stage">
+                      This is a map.
+                  </div>
+
+                </div>
+              </div>
+              <!---->
+            </div>
+
+          </div>
+        <div class="col-sm-9">
+             <!-- @@@@@@@@@@@@@@@@@@ ROW @@@@@@@@@@@@@@@@ -->
+
+          <div class="row">
+            <div class="col-sm-12">
+              <div class="chart-wrapper">
+                <div class="chart-title">
+                    Map
+                </div>
+                <div class="chart-stage">
+                    <div class="inline" style="margin-left: -100px" id="india1"></div>
+                </div>
+
+              </div>
+            </div>
+            <!---->
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+
+      <hr>
+
+      <p class="small text-muted">Built by Dewal Gupta [using <a href="https://keen.io">Keen IO</a>]</p>
+
+    </div>
+
+    <script type="text/javascript" src="/assets/lib/jquery/dist/jquery.min.js"></script>
+    <script type="text/javascript" src="/assets/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="/assets/lib/holderjs/holder.js"></script>
+    <script>
+      Holder.add_theme("white", { background:"#fff", foreground:"#a7a7a7", size:10 });
+    </script>
+
+    <script type="text/javascript" src="/assets/lib/keen-js/dist/keen.min.js"></script>
+    <script type="text/javascript" src="/assets/js/meta.js"></script>
+
+<script>
+var socket = io.connect('http://localhost:8080/map');
+var parser = new OpenLayers.Format.GeoJSON();
+var vectors = parser.read(india);
+
+function district(lat,long) {
+    var point = new OpenLayers.Geometry.Point(long, lat);
+    for( var i = 0; i< vectors.length; i++ ){
+        if(vectors[i].geometry){
+            if(vectors[i].geometry.intersects(point)){
+                return vectors[i].attributes['DISTRICT'];
+            }
+        }
+    }
+    return -1;
+}
+
+
+var width = 1000,
+    height = 800;
+
+var tooltip = d3.select('#india1')
+    .append("div")
+    .style("position", "absolute")
+    .style("z-index", "10")
+    .style("visibility", "hidden")
+    .style("color", "white")
+    .style("padding", "8px")
+    .style("background-color", "rgba(0, 0, 0, 0.75)")
+    .style("border-radius", "6px")
+    .style("font", "12px sans-serif")
+    .text("tooltip");
+
+var projection = d3.geo.albers()
+    .scale(1500)
+    .translate([(width/2)-40, height/2])
+    .rotate([-80.0200,0])
+    .center([0,22.1800])
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var svg = d3.select("body").select('#india1').append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var g = svg.append("g");
+
+g.append("rect")
+    .attr("class", "mapbg")
+    .attr("fill", "none")
+    .attr("width", width)
+    .attr("height", height);
+
+d3.json("indiaTopoJSON_new.json", function(error, map) {
+
+        g.append('g')
+            .attr('id', 'districts')
+            .selectAll("district")
+            .data(topojson.feature(map, map.objects.asasas).features)
+            .enter().append("path")
+            .attr("id", function(d) { return d.properties.DISTRICT
+            })
+            .attr('class', 'subunits')
+            .attr("d", path)
+            // .attr("fill", '#058905')
+            .attr("fill", 'white');
+            // .on("mouseover", function(d) {
+            //     d3.select(this).attr("fill", "orange");
+            //     tooltip.text(d.properties.DISTRICT);
+            //     tooltip.style("visibility", "visible");})
+            // .on("mousemove", function(d) {
+            //     return tooltip.style("top", (d3.event.pageY+20)+"px").style("left",(d3.event.pageX+10)+"px");})
+            // .on("mouseout", function(){
+            //     d3.select(this).attr("fill", "white");
+            //     return tooltip.style("visibility", "hidden");
+            // });
+
+            g.append("path")
+                .datum(topojson.mesh(map, map.objects.asasas,  function(a, b) { return a === b}))
+                .attr("d", path)
+                .attr("class", "subunit-boundary");
+            g.append("path")
+            .datum(topojson.mesh(map, map.objects.asasas,  function(a, b) { return a !== b}))
+                .attr("d", path)
+                .attr("class", "subunit-boundary-2");
+    });
+
+svg.selectAll(".city-loc")
+    .data(cities)
+    .enter()
+    .append("circle", ".city-loc")
+    .attr("r", 2)
+    .attr("fill", 'black')
+    .attr("transform", function(d) {
+        return "translate(" + projection([
+        d.lon,
+        d.lat
+        ]) + ")";
+    });
+
+svg.selectAll(".place-label")
+    .data(cities)
+    .enter().append("text")
+    .attr("class", "place-label")
+    .attr("transform", function(d) { return "translate(" + projection([d.lon, d.lat]) + ")"; })
+    .attr("dy", function(d) {
+        if (d.name == "Chandigarh") {
+            return "0.8em";
+        }
+        if (d.name == "Meerut") {
+            return "-0.2em";
+        }
+
+        return ".35em";
+    })
+    .text(function(d) { return d.name; });
+
+svg.selectAll(".place-label")
+    .attr("x", function(d) {
+        if (d.name == "Faridabad") {
+            return -6;
+        }
+        if (d.name == "Chennai") {
+            return 6;
+        }
+        if (d.name == "Jaipur") {
+            return -6;
+        }
+        return d.lon > 78 ? -6 : 6; })
+    .style("text-anchor", function(d) {
+        if (d.name == "Faridabad") {
+            return "end";
+        }
+        if (d.name == "Chennai") {
+            return "start";
+        }
+        if (d.name == "Jaipur") {
+            return "end";
+        }
+        return d.lon > 78 ? "end" : "start"; });
+
+function update2(ddata) {
+    var max = 0;
+    for (var key in ddata) {
+        if (ddata.hasOwnProperty(key)) {
+            max = Math.max(max, ddata[key]);
+        }
+    }
+
+    var svg = d3.select('#india1').select("svg").select('g').selectAll('.subunits');
+        svg.attr("fill", 'green')
+        .attr("opacity", function(d) {
+            var dist = d.properties.DISTRICT;
+            var opac = 0;
+            if (dist != null) {
+                // dist = dist.toLowerCase();
+                // console.log(dist);
+                if (ddata[dist] !== undefined) {
+                    opac = ddata[dist]/max;
+                }
+            }
+            return opac;
+        });
+
+}
+
+    var ddata = {};
+    socket.on('map', function (data) {
+        for (var i=0; i<data.length; i++) {
+            var lat = data[i]['lat'];
+            var long = data[i]['long'];
+            var dist = district(lat, long);
+            // dist = dist.toLowerCase();
+            if (dist != -1) {
+                if (ddata[dist] !== undefined) {
+                    ddata[dist]++;
+                } else {
+                    ddata[dist] = 1;
+                }
+            }
+        }
+        update2(ddata);
+    });
+
+</script>
+</body>
+</html>

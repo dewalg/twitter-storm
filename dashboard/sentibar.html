@@ -1,0 +1,195 @@
+
+<!doctype html>
+<head>
+	<link type="text/css" rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/src/css/graph.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/src/css/detail.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/src/css/legend.css">
+	<link type="text/css" rel="stylesheet" href="http://code.shutterstock.com/rickshaw/examples/css/extensions.css?v=2">
+
+	<script src="http://code.shutterstock.com/rickshaw/vendor/d3.v3.js"></script>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+	<script>
+		jQuery.noConflict();
+	</script>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.15/jquery-ui.min.js"></script>
+
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Class.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Compat.ClassList.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Renderer.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Renderer.Bar.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.RangeSlider.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.RangeSlider.Preview.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.HoverDetail.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Annotate.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Legend.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Axis.Time.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Behavior.Series.Toggle.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Behavior.Series.Order.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Behavior.Series.Highlight.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Smoother.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Time.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Time.Local.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Number.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.RandomData.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Fixtures.Color.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Color.Palette.js"></script>
+	<script src="http://code.shutterstock.com/rickshaw/src/js/Rickshaw.Graph.Axis.Y.js"></script>
+
+	<script src="http://code.shutterstock.com/rickshaw/examples/js/extensions.js"></script>
+	</head>
+<body>
+<div id="content">
+
+	<form id="side_panel">
+		<h1>Random Data in the Future</h1>
+		<section><div id="legend"></div></section>
+		<section>
+			<h6>Smoothing</h6>
+			<div id="smoother"></div>
+		</section>
+	</form>
+
+	<div id="chart_container">
+		<div id="chart"></div>
+		<div id="timeline"></div>
+		<div id="preview"></div>
+	</div>
+
+
+</div>
+
+<script>
+// set up our data series with 150 random data points
+var timeBase = Math.floor(new Date().getTime() / 1000);
+var seriesData = [ [{x:timeBase, y:0}], [{x:timeBase, y:0}] ];
+
+var palette = new Rickshaw.Color.Palette( { scheme: 'classic9' } );
+
+// instantiate our graph!
+
+var graph = new Rickshaw.Graph( {
+	element: document.getElementById("chart"),
+	width: 900,
+	height: 500,
+	renderer: 'bar',
+	stroke: true,
+	preserve: true,
+	series: [
+		{
+			color: palette.color(),
+			data: seriesData[1],
+			name: 'Positive'
+		}, {
+			color: palette.color(),
+			data: seriesData[0],
+			name: 'Negative'
+		}
+	]
+} );
+
+graph.render();
+
+var preview = new Rickshaw.Graph.RangeSlider( {
+	graph: graph,
+	element: document.getElementById('preview'),
+} );
+
+var hoverDetail = new Rickshaw.Graph.HoverDetail( {
+	graph: graph,
+	xFormatter: function(x) {
+		return new Date(x * 1000).toString();
+	}
+} );
+
+var legend = new Rickshaw.Graph.Legend( {
+	graph: graph,
+	element: document.getElementById('legend')
+
+} );
+
+var shelving = new Rickshaw.Graph.Behavior.Series.Toggle( {
+	graph: graph,
+	legend: legend
+} );
+
+var order = new Rickshaw.Graph.Behavior.Series.Order( {
+	graph: graph,
+	legend: legend
+} );
+
+var highlighter = new Rickshaw.Graph.Behavior.Series.Highlight( {
+	graph: graph,
+	legend: legend
+} );
+
+var smoother = new Rickshaw.Graph.Smoother( {
+	graph: graph,
+	element: document.querySelector('#smoother')
+} );
+
+var ticksTreatment = 'glow';
+
+var xAxis = new Rickshaw.Graph.Axis.Time( {
+	graph: graph,
+	ticksTreatment: ticksTreatment,
+	timeFixture: new Rickshaw.Fixtures.Time.Local()
+} );
+
+xAxis.render();
+
+var yAxis = new Rickshaw.Graph.Axis.Y( {
+	graph: graph,
+	tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+	ticksTreatment: ticksTreatment
+} );
+
+yAxis.render();
+
+
+var controls = new RenderControls( {
+	element: document.querySelector('form'),
+	graph: graph
+} );
+
+
+var socket = io.connect('http://localhost:8080');
+var pos=0;
+var neg=0;
+socket.on('sentiment', function (data) {
+	var pos_new = data[0]['positive'];
+	var neg_new = data[0]['negative'];
+	//
+	// p_diff = pos_new - pos;
+	// n_diff = neg_new - neg;
+	// pos = pos_new;
+	// neg = neg_new;
+	n_diff = neg_new;
+	p_diff = pos_new;
+
+	var timeBase = Math.floor(new Date().getTime() / 1000);
+	seriesData[0].push({x:timeBase, y:n_diff});
+	seriesData[1].push({x:timeBase, y:p_diff});
+
+	if (seriesData[0].length >= 150) {
+		seriesData[0].shift();
+		seriesData[1].shift();
+	}
+	graph.update();
+});
+
+var previewXAxis = new Rickshaw.Graph.Axis.Time({
+	graph: preview.previews[0],
+	timeFixture: new Rickshaw.Fixtures.Time.Local(),
+	ticksTreatment: ticksTreatment
+});
+
+previewXAxis.render();
+
+</script>
+
+</body>

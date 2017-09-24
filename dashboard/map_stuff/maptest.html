@@ -1,0 +1,24 @@
+<html><head><script src="http://openlayers.org/api/OpenLayers.js"></script>
+    <script src="mapindia.js"></script>
+</head>
+<body>
+    <script>
+    var parser = new OpenLayers.Format.GeoJSON();
+var vectors = parser.read(india);
+var lat = 26.8000;
+var lon = 80.9;
+var point = new OpenLayers.Geometry.Point(lon, lat);
+for( var i = 0; i< vectors.length; i++ ){
+    // console.log(vectors[i].attributes['NAME']);
+
+    if(vectors[i].geometry){
+        if(vectors[i].geometry.intersects(point)){
+            console.log(vectors[i].attributes['NAME']);
+
+        }
+    }
+}
+
+</script>
+</body>
+</html>

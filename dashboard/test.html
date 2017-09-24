@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <link rel="stylesheet" type="text/css" href="/bower_components/dcjs/dc.css"/>
+
+</head>
+<body>
+    <div id="monthly-move-chart"></div>
+
+<!-- MY CUSTOM DEPENDCIES -->
+<!--%%%%%%%%%%%%%%%%%%%%%-->
+
+<script type="text/javascript" src="/bower_components/d3/d3.js"></script>
+<script type="text/javascript" src="/bower_components/crossfilter/crossfilter.js"></script>
+<script type="text/javascript" src="/bower_components/dcjs/dc.js"></script>
+<script>
+
+
+var data = [{'date': '2015-09-23 05:37:15+0000', 'sentiment':'1', 'user': 'whiteprincessy', 'text': 'rt @real_liam_payne: you can now preorder made in the a.m. and get infinity off the album now! https://t.co/ombkndt5cu', 'fol_count': 54, 'hashtag':'juice'},
+{'date': '2015-09-23 05:40:15+0000', 'sentiment':'0', 'user': 'dg', 'text': 'hope this works.', 'fol_count': 20, 'hashtag':'juice', 'id': '1'},
+{'date': '2015-09-23 05:40:15+0000', 'sentiment':'1', 'user': 'dg', 'text': 'hope this works.', 'fol_count': 20, 'hashtag':'juice', 'id': '2'},
+{'date': '2015-09-23 05:40:15+0000', 'sentiment':'1', 'user': 'dg', 'text': 'hope this works.', 'fol_count': 20, 'hashtag':'juice', 'id': '1'},
+{'date': '2015-09-23 05:45:15+0000', 'sentiment':'0', 'user': 'dewal', 'text': 'blah blah', 'fol_count': 3, 'hashtag':'test1', 'id': '2'},
+{'date': '2015-09-23 05:39:15+0000', 'sentiment':'1', 'user': 'dgupta', 'text': 'wow hello world', 'fol_count': 103, 'hashtag':'test2', 'id': '12'},
+]
+    var dateFormat = d3.time.format("%X");
+    var newFormat = d3.time.format("%Y-%m-%d %H:%M:%S");
+    // var numberFormat = d3.format('.2f');
+
+    data.forEach(function (d) {
+            // d.month = d3.time.month(d.dd); // pre-calculate month for better performance
+            d.sentiment = +d.sentiment;
+            d.time = newFormat.parse(d.date.substr(0,19));
+            // var date = new Date(d.date).getSeconds();
+        });
+
+    var ndx = crossfilter(data);
+    var all = ndx.groupAll();
+
+    var htDimension = ndx.dimension(function (d) {
+        return d.hashtag;
+   });
+
+   var yearlyPerformanceGroup = htDimension.group().reduce(
+       /* callback for when data is added to the current filter results */
+        function (p, v) {
+            ++p.count;
+            p.senti += v.sentiment;
+            p.avg_sent = p.count ? p.senti / p.count : 0;
+            p.reach += v.fol_count;
+            return p;
+        },
+        /* callback for when data is removed from the current filter results */
+        function (p, v) {
+            --p.count;
+            p.senti -= v.sentiment;
+            p.avg_sent = p.count ? p.senti / p.count : 0;
+            p.reach -= v.fol_count;
+            return p;
+        },
+        /* initialize p */
+        function () {
+            return {
+                count: 0,
+                senti: 0,
+                avg_sent: 0,
+                reach: 0,
+            };
+        }
+   );
+
+    /*#####################################################*/
+
+
+    /*#####################################################*/
+
+    var timex = ndx.dimension(function(d) {
+        // console.log(d3.time.minute(d.time));
+        return d3.time.minute(d.time);
+    });
+
+    var timechart = timex.group().reduceCount(
+        function(d) { return d.time; } /*
+        function (p, v) {
+            ++p.mentions;
+            return p;
+        },
+        function (p, v) {
+            --p.mentions;
+            return p;
+        },
+        function () {
+            return {mentions: 0};
+        }*/
+    );
+
+    // dc.lineChart('#monthly-move-chart')
+    //     .renderArea(true)
+    //     .width(990)
+    //     .height(200)
+    //     .transitionDuration(1000)
+    //     .margins({top: 30, right: 50, bottom: 25, left: 40})
+    //     .dimension(timex)
+    //     .mouseZoomable(true)
+    //
+    //     .group(timechart)
+    //     .valueAccessor(function (d) {
+    //         return d.value.mentions;
+    //     })
+    //     .x(d3.time.scale().domain([new Date(2015, 9, 23), new Date(2015, 9, 24)]))
+    //     .elasticY(true)
+    //     .renderHorizontalGridLines(true)
+    //     .title(function (d) {
+    //         var value = d.value.mentions ? d.value.mentions : d.value;
+    //         if (isNaN(value)) {
+    //             value = 0;
+    //         }
+    //         return dateFormat(d.key) + '\n' + numberFormat(value);
+    //     });
+
+
+    // dc.barChart('#monthly-move-chart')
+    //
+    // .width(960)
+    // .height(150)
+    // .margins({top: 10, right: 10, bottom: 20, left: 40})
+    // .dimension(timex)
+    // .group(timechart)
+    // .transitionDuration(500)
+    // .elasticY(true)
+    // .x(d3.time.scale().domain([new Date(2015, 9, 22), new Date(2015, 9, 24)]))
+    // .xAxis();
+
+
+    /*
+        .width(990)
+        .height(200)
+        .transitionDuration(1000)
+        .margins({top: 30, right: 50, bottom: 25, left: 40})
+        .dimension(timex)
+
+
+        .group(timechart)
+        .mouseZoomable(true)
+        // .valueAccessor(function (d) {
+        //     return d.value.mentions;
+        // })
+        // .filterPrinter(function (filters) {
+        //     var filter = filters[0], s = '';
+        //     s += (filter[0]).toFixed(2) + '% -> ' + (filter[1]).toFixed(2) + '%';
+        //     return s;
+        // })
+        .x(d3.time.scale().domain([new Date(2015, 9, 22), new Date(2015, 9, 24)]))
+        // .round(d3.time.minutes.round)
+        // .xUnits(d3.time.hours)
+        .xAxis();
+        // .renderHorizontalGridLines(true)
+        // .xAxis().tickFormat(
+        // function (v) { return dateFormat(v); });
+        // .valueAccessor(function (d) {
+        //     return d.value.mentions;
+        // })
+        // .x(d3.time.scale().domain([new Date(2015, 9, 23), new Date(2015, 9, 24)]))
+        // .elasticY(true)
+        // .renderHorizontalGridLines(true)
+        // .title(function (d) {
+        //     var value = d.value.mentions ? d.value.mentions : d.value;
+        //     if (isNaN(value)) {
+        //         value = 0;
+        //     }
+        //     return dateFormat(d.key) + '\n' + numberFormat(value);
+        // });
+    /*#####################################################*/
+
+    var barChart = dc.barChart("#monthly-move-chart");
+    barChart.width(500)
+        .height(250)
+        .dimension(timex)
+        .group(timechart)
+        .xUnits(d3.time.minute)
+        .x(d3.time.scale().domain([(new Date(2015,08,23)), (new Date(2015,08,24))]).nice(d3.time.day))
+        .xAxis().tickFormat(function (x) {
+            return x.getHours()+ ': ' + x.getMinutes();
+        });
+
+    dc.renderAll();
+
+// })
+
+</script>
+</body>
+</html>
